@@ -1,28 +1,32 @@
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+using Twilio.Rest.Api.V2010.Account;
+using Twilio.TwiML;
 
 namespace Company.Function
 {
     public static class DurableFunctionsOrchestrationCSharp
     {
         [FunctionName("DurableFunctionsOrchestrationCSharp")]
-        public static async Task<List<string>> RunOrchestrator(
+                public static async Task<List<string>> RunOrchestrator(
             [OrchestrationTrigger]IDurableOrchestrationContext context)
         {
-            var outputs = new List<string>);
-
-            // Replace "hello" with the name of your Durable Activity Function.
-            outputs.Add(await context.CallActivityAsync<string>("DurableFunctionsOrchestrationCSharp_Hello", "Tokyo"));
+            var outputs = new List<string>();
+             outputs.Add(await context.CallActivityAsync<string>("DurableFunctionsOrchestrationCSharp_Hello", "Tokyo"));
             outputs.Add(await context.CallActivityAsync<string>("DurableFunctionsOrchestrationCSharp_Hello", "Seattle"));
             outputs.Add(await context.CallActivityAsync<string>("DurableFunctionsOrchestrationCSharp_Hello", "London"));
-            // returns ["Hello Tokyo!", "Hello Seattle!", "Hello London!"]
-            return outputs;
+             return  outputs;
+          
+
         }
 
         [FunctionName("DurableFunctionsOrchestrationCSharp_Hello")]
@@ -33,7 +37,7 @@ namespace Company.Function
         }
 
         [FunctionName("DurableFunctionsOrchestrationCSharp_HttpStart")]
-        public static async Task<HttpResponseMessage> HttpStart(
+       public static async Task<HttpResponseMessage> HttpStart(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]HttpRequestMessage req,
             [DurableClient]IDurableOrchestrationClient starter,
             ILogger log)
@@ -42,10 +46,23 @@ namespace Company.Function
             string instanceId = await starter.StartNewAsync("DurableFunctionsOrchestrationCSharp", null);
 
             log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
- //var status=starter.GetStatusAsync(instanceId);
-        //    return req.CreateResponse(status.Result);
-           // return starter.CreateCheckStatusResponse(req, instanceId);
-           return req.CreateResponse( starter.CreateHttpManagementPayload(instanceId).StatusQueryGetUri);
+              // return req.CreateResponse( starter.CreateHttpManagementPayload(instanceId).StatusQueryGetUri);
+
+           DurableOrchestrationStatus status;
+            while (true)
+            {
+                status = await starter.GetStatusAsync(instanceId);
+     
+                if (status.RuntimeStatus == OrchestrationRuntimeStatus.Completed ||
+                    status.RuntimeStatus == OrchestrationRuntimeStatus.Failed ||
+                    status.RuntimeStatus == OrchestrationRuntimeStatus.Terminated)
+                {
+                    break;
+                }
+
+               }
+
+              return req.CreateResponse(System.Net.HttpStatusCode.OK,status.Output);
         }
     }
 }
