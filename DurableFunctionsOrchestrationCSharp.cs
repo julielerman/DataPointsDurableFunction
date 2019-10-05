@@ -49,7 +49,7 @@ namespace DataPoints.Function
         ILogger log)
     {
       // Function input comes from the request content.
-      string instanceId = await starter.StartNewAsync("DurableFunctionsOrchestrationCSharp", null);
+       string instanceId = await starter.StartNewAsync("DurableFunctionsOrchestrationCSharp", null);
 
       log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
       //  return client.CreateCheckStatusResponse(req, id);
